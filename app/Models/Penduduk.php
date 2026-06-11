@@ -24,7 +24,7 @@ class Penduduk extends Model
         'status_perkawinan',
         'pekerjaan',
         'alamat',
-        'foto',
+        'foto_ktp',
         'foto_kk',
         'is_aktif',
     ];

@@ -111,6 +111,12 @@
             </div>
         </div>
 
+        <!-- tambahan dari farand untuk menuju halaman login -->
+        <div class="text-sm text-right">
+            <span class="text-gray-500">Sudah punya akun?</span>
+            <a href="{{ route('login') }}" wire:navigate class="font-medium text-indigo-600 hover:text-indigo-500">Silahkan Login</a>
+        </div>
+
         <!-- Tombol Kirim -->
         <div class="flex justify-end">
             <button type="submit" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg text-sm shadow-sm transition duration-150 cursor-pointer">

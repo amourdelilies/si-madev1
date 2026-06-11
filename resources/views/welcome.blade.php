@@ -10,7 +10,8 @@
 <body class="bg-gray-50 min-h-screen">
 
     <main class="py-10">
-        {{ $slot }}
+        {{ $slot ?? '' }}
+        <!-- <h1>Hai SIMADEV1</h1> -->
     </main>
 
     @livewireScripts

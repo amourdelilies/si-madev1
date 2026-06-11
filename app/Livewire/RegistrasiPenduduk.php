@@ -95,7 +95,7 @@ class RegistrasiPenduduk extends Component
             'status_perkawinan' => $this->status_perkawinan,
             'pekerjaan' => $this->pekerjaan,
             'alamat' => $this->alamat,
-            'foto' => $pathKtp,   // Jalur foto KTP ke database
+            'foto_ktp' => $pathKtp,   // Jalur foto KTP ke database
             'foto_kk' => $pathKk, // Jalur foto KK ke database
             'is_aktif' => false, 
         ]);

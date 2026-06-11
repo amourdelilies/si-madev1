@@ -20,7 +20,8 @@ return new class extends Migration
             $table->date('tanggal_lahir');
             $table->text('alamat');
             $table->string('nomor_telepon')->nullable();
-            $table->string('foto')->nullable();
+            $table->string('foto_ktp')->nullable();
+            $table->string('foto_kk')->nullable();
             $table->enum('status_akun', ['aktif', 'nonaktif', 'pending'])->default('pending');
             $table->timestamps();
             $table->softDeletes();

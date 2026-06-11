@@ -47,7 +47,6 @@ class DashboardPenduduk extends Component
             session()->flash('message', ' Pengajuan surat berhasil dikirim! Silakan tunggu verifikasi berkas oleh Perangkat Desa.');
         }
     }
-
  
     #[Layout('welcome')]
     public function render()
