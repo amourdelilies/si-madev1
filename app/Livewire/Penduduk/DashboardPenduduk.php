@@ -31,6 +31,7 @@ class DashboardPenduduk extends Component
 
         // Cari ID penduduk fisik dari user yang sedang login
         $pendudukFisik = Penduduk::where('user_id', Auth::id())->first();
+        // pengaduan : farand
 
         if ($pendudukFisik) {
             PengajuanSurat::create([
@@ -45,6 +46,8 @@ class DashboardPenduduk extends Component
 
             // Tampilkan notifikasi sukses di halaman dashboard
             session()->flash('message', ' Pengajuan surat berhasil dikirim! Silakan tunggu verifikasi berkas oleh Perangkat Desa.');
+
+          
         }
     }
  
@@ -60,9 +63,16 @@ class DashboardPenduduk extends Component
         }
 
         $dataPenduduk = Penduduk::where('user_id', Auth::id())->first();
+       
+        // untuk pengaduan : from farand
+        $daftarPengaduan = \App\Models\Pengaduan::where('penduduk_id', $dataPenduduk->id)
+            ->latest()
+            ->take(3)
+            ->get();
 
         return view('livewire.penduduk.dashboard-penduduk', [
-            'penduduk' => $dataPenduduk
+            'penduduk' => $dataPenduduk,
+            'daftarPengaduan' => $daftarPengaduan
         ]);
     }
 }

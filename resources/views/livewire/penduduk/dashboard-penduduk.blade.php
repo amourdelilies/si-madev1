@@ -91,7 +91,12 @@
                     </div>
                 </form>
             </div>
+
+            
+
         @endif
+
+        <livewire:pengaduan.riwayat-pengaduan-singkat />
 
     @else
         <div class="p-4 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-lg">
