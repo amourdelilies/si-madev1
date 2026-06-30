@@ -385,7 +385,17 @@
                     </div>
                 @endif
             </div>
+<<<<<<< HEAD
         </div>
+=======
+
+            
+
+        @endif
+
+        <livewire:pengaduan.riwayat-pengaduan-singkat />
+
+>>>>>>> feature/pengaduan-warga
     @else
         <div class="p-4 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-lg">
             Akun user Anda terdeteksi, namun detail profil kependudukan fisik belum terhubung sempurna. Silakan hubungi perangkat desa.

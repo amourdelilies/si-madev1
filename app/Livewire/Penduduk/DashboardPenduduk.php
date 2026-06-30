@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB; 
 use App\Models\Penduduk;
 use App\Models\PengajuanSurat;
+use App\Models\Pengaduan; // 🌟 Tambahkan ini agar lebih rapi memanggil modelnya Farand
 use Livewire\Attributes\Layout;
 use Livewire\WithFileUploads; 
 
@@ -70,16 +71,9 @@ class DashboardPenduduk extends Component
             $uploadedPaths = [];
             foreach ($this->bukti_pendukung as $key => $file) {
                 if ($file) {
-                    // Ambil ekstensi asli berkas (misal: jpg, png, pdf)
                     $extension = $file->getClientOriginalExtension();
-                    
-                    // Bersihkan nama warga dari spasi agar aman untuk nama file di URL/Storage
                     $namaBersih = str_replace(' ', '_', $pendudukFisik->nama_lengkap);
-                    
-                    // Buat format nama file: NamaWarga-JenisBerkas-Waktu.ekstensi
                     $filename = $namaBersih . '-' . $key . '-' . time() . '.' . $extension;
-                    
-                    // Simpan menggunakan storeAs dengan nama file custom rapi
                     $uploadedPaths[$key] = $file->storeAs('bukti_surat', $filename, 'public');
                 }
             }
@@ -97,7 +91,8 @@ class DashboardPenduduk extends Component
 
             $this->reset(['jenis_surat', 'keperluan', 'bukti_pendukung']);
 
-            session()->flash('message', 'Pengajuan surat beserta dokumen persyaratan berhasil dikirim!');
+            // 🟢 Diperbaiki: Digabung menjadi satu flash message yang paling estetis dan informatif
+            session()->flash('message', 'Pengajuan surat berhasil dikirim! Silakan tunggu verifikasi berkas oleh Perangkat Desa.');
         }
     }
  
@@ -112,14 +107,22 @@ class DashboardPenduduk extends Component
         }
 
         $dataPenduduk = Penduduk::where('user_id', Auth::id())->first();
+       
+        // Ambil riwayat pengaduan (Fitur dari Farand)
+        $daftarPengaduan = $dataPenduduk 
+            ? Pengaduan::where('penduduk_id', $dataPenduduk->id)->latest()->take(3)->get()
+            : collect();
 
+        // Ambil riwayat pengajuan surat
         $riwayatSurat = $dataPenduduk 
             ? PengajuanSurat::where('penduduk_id', $dataPenduduk->id)->latest()->get() 
             : collect();
 
+        // 🟢 Diperbaiki: Koma pembatas array sudah dipasang dengan benar
         return view('livewire.penduduk.dashboard-penduduk', [
             'penduduk' => $dataPenduduk,
-            'riwayatSurat' => $riwayatSurat
+            'riwayatSurat' => $riwayatSurat,
+            'daftarPengaduan' => $daftarPengaduan,
         ]);
     }
 }
