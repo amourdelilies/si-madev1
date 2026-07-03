@@ -34,3 +34,22 @@ Route::middleware(['auth'])->group(function () {
 Route::get('/warga/dashboard', DashboardPenduduk::class)
     ->middleware('auth')
     ->name('penduduk.dashboard');
+
+    use Illuminate\Support\Facades\DB;
+    use Barryvdh\DomPDF\Facade\Pdf;
+    
+    Route::get('/inventaris/print-single/{id}', function ($id) {
+        $item = DB::table('inventaris')->where('id', $id)->first();
+    
+        if (!$item) {
+            abort(404, 'Data inventaris tidak ditemukan.');
+        }
+    
+        $pdf = Pdf::loadView('inventaris.print', compact('item'))
+                  ->setPaper([0, 0, 283.46, 141.73], 'portrait');
+    
+        // 🌟 AMAN: Ubah karakter "/" atau "\" menjadi "-" agar tidak error saat didownload
+        $safeFileName = str_replace(['/', '\\'], '-', $item->kode_barang);
+    
+        return $pdf->stream("stiker-{$safeFileName}.pdf");
+    })->name('inventaris.print-single');
