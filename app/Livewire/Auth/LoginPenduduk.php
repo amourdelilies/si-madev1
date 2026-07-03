@@ -71,6 +71,7 @@ class LoginPenduduk extends Component
     #[Layout('welcome')] // 🟢 Deklarasi layout tunggal yang sah di Livewire v3
     public function render()
     {
+        // Murni return view tanpa embel-embel ->layout() di bawahnya
         return view('livewire.auth.login-penduduk');
     }
 }

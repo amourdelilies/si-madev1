@@ -7,7 +7,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB; 
 use App\Models\Penduduk;
 use App\Models\PengajuanSurat;
-use App\Models\Pengaduan; // 🌟 Tambahkan ini agar lebih rapi memanggil modelnya Farand
+use App\Models\Pengaduan; 
+use App\Models\BantuanLumbungDesa; // Pastikan model ini di-import
 use Livewire\Attributes\Layout;
 use Livewire\WithFileUploads; 
 
@@ -15,9 +16,28 @@ class DashboardPenduduk extends Component
 {
     use WithFileUploads;
 
+    // Properti Layanan Surat
     public $jenis_surat, $keperluan;
     public $bukti_pendukung = []; 
     public $activeTab = 'profil'; 
+
+    // Properti Donasi Lumbung Desa (Swadaya Warga)
+    public $nama_donasi, $jumlah_donasi, $keterangan_donasi;
+    public $foto_donasi; 
+
+    public function mount()
+    {
+        if (!Auth::check()) {
+            return redirect()->route('login');
+        }
+
+        if (Auth::user()->email === 'admin@gmail.com' || str_contains(Auth::user()->email, 'admin')) {
+            Auth::logout();
+            session()->invalidate();
+            session()->regenerateToken();
+            return redirect()->route('registrasi');
+        }
+    }
 
     public function logout()
     {
@@ -34,7 +54,6 @@ class DashboardPenduduk extends Component
 
     public function ajukanSurat()
     {
-        // 1. Tentukan aturan validasi dinamis berdasarkan jenis surat
         $rules = [
             'jenis_surat' => 'required',
             'keperluan' => 'required|string|min:5',
@@ -57,8 +76,6 @@ class DashboardPenduduk extends Component
         $pendudukFisik = Penduduk::where('user_id', Auth::id())->first();
 
         if ($pendudukFisik) {
-            
-            // 🟢 SOLUSI PAKEM: Kunci mati penentuan ID agar sinkron dengan Filament & anti-error 1452
             $jenisSuratId = match ($this->jenis_surat) {
                 'Surat Keterangan Domisili'            => 1,
                 'Surat Keterangan Usaha (SKU)'         => 2,
@@ -67,7 +84,6 @@ class DashboardPenduduk extends Component
                 default                                => 1,
             };
 
-            // 2. Proses upload semua file yang ada di dalam array bukti_pendukung
             $uploadedPaths = [];
             foreach ($this->bukti_pendukung as $key => $file) {
                 if ($file) {
@@ -78,7 +94,6 @@ class DashboardPenduduk extends Component
                 }
             }
 
-            // 3. Simpan ke database dengan jenis_surat_id yang sudah dikunci pas
             PengajuanSurat::create([
                 'penduduk_id'      => $pendudukFisik->id,
                 'jenis_surat'      => $this->jenis_surat,
@@ -90,39 +105,80 @@ class DashboardPenduduk extends Component
             ]);
 
             $this->reset(['jenis_surat', 'keperluan', 'bukti_pendukung']);
-
-            // 🟢 Diperbaiki: Digabung menjadi satu flash message yang paling estetis dan informatif
             session()->flash('message', 'Pengajuan surat berhasil dikirim! Silakan tunggu verifikasi berkas oleh Perangkat Desa.');
+        }
+    }
+
+    /**
+     * 🟢 FITUR BARU: Proses Rencana Donasi Hasil Panen/Bumi dari Warga
+     */
+    public function donasikanBarang()
+    {
+        $this->validate([
+            'nama_donasi' => 'required|string|min:3',
+            'jumlah_donasi' => 'required|integer|min:1',
+            'keterangan_donasi' => 'nullable|string',
+            'foto_donasi' => 'required|image|max:2048', 
+        ]);
+
+        $pendudukFisik = Penduduk::where('user_id', Auth::id())->first();
+
+        if ($pendudukFisik) {
+            // Beri nama file unik untuk foto barang donasi
+            $filename = 'donasi_' . time() . '.' . $this->foto_donasi->getClientOriginalExtension();
+            $pathFoto = $this->foto_donasi->storeAs('dokumentasi-lumbung/warga', $filename, 'public');
+
+            // Simpan rencana donasi masuk dengan status 'pending' dan sumber_input 'warga'
+            BantuanLumbungDesa::create([
+                'penduduk_id' => $pendudukFisik->id,
+                'nama_barang' => $this->nama_donasi,
+                'jumlah_bantuan' => $this->jumlah_donasi,
+                'sumber_bantuan' => 'Swadaya / CSR / Sumbangan', 
+                'alasan_keperluan' => $this->keterangan_donasi, 
+                'status' => 'pending', 
+                'sumber_input' => 'warga', 
+                'foto_penerimaan_warga' => $pathFoto, 
+                'disalurkan_pada' => now(),
+            ]);
+
+            $this->reset(['nama_donasi', 'jumlah_donasi', 'keterangan_donasi', 'foto_donasi']);
+            session()->flash('message_lumbung', 'Rencana donasi berhasil dikirim! Silakan bawa hasil bumi Anda ke Lumbung Desa untuk diverifikasi dan ditimbang petugas.');
         }
     }
  
     #[Layout('welcome')]
     public function render()
     {
-        if (Auth::user()->email === 'admin@gmail.com' || str_contains(Auth::user()->email, 'admin')) {
-            Auth::logout();
-            session()->invalidate();
-            session()->regenerateToken();
-            return redirect()->route('registrasi');
-        }
-
         $dataPenduduk = Penduduk::where('user_id', Auth::id())->first();
        
-        // Ambil riwayat pengaduan (Fitur dari Farand)
         $daftarPengaduan = $dataPenduduk 
             ? Pengaduan::where('penduduk_id', $dataPenduduk->id)->latest()->take(3)->get()
             : collect();
 
-        // Ambil riwayat pengajuan surat
         $riwayatSurat = $dataPenduduk 
             ? PengajuanSurat::where('penduduk_id', $dataPenduduk->id)->latest()->get() 
             : collect();
 
-        // 🟢 Diperbaiki: Koma pembatas array sudah dipasang dengan benar
+        // 1. Ambil data riwayat kontribusi donasi yang dikirim oleh warga ini
+        $riwayatDonasi = $dataPenduduk 
+            ? BantuanLumbungDesa::where('penduduk_id', $dataPenduduk->id)->where('sumber_input', 'warga')->latest()->get()
+            : collect();
+
+        // 🟢 2. TAMBAHKAN INI: Ambil riwayat bantuan yang DITERIMA warga dari admin desa
+        $riwayatPenerimaan = $dataPenduduk
+            ? BantuanLumbungDesa::where('penduduk_id', $dataPenduduk->id)
+                ->where('sumber_input', '!=', 'warga') // mengambil inputan admin
+                ->where('status', 'disalurkan') // hanya yang sudah resmi disalurkan
+                ->latest()
+                ->get()
+            : collect();
+
         return view('livewire.penduduk.dashboard-penduduk', [
             'penduduk' => $dataPenduduk,
             'riwayatSurat' => $riwayatSurat,
             'daftarPengaduan' => $daftarPengaduan,
+            'riwayatDonasi' => $riwayatDonasi, 
+            'riwayatPenerimaan' => $riwayatPenerimaan, // 🟢 Oper ke blade
         ]);
     }
 }

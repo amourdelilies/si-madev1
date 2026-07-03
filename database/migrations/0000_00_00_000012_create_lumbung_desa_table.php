@@ -6,30 +6,29 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    
     public function up(): void
 {
     Schema::create('bantuan_lumbung_desa', function (Blueprint $table) {
         $table->id();
-        // Relasi ke warga yang menerima bantuan
+        
+        // Relasi ke warga (menembak id di tabel penduduk)
         $table->foreignId('penduduk_id')->constrained('penduduk')->onDelete('cascade');
         
-        // Relasi ke tabel master lumbung_desa bawaan timmu
-        $table->foreignId('lumbung_desa_id')->constrained('lumbung_desa')->onDelete('cascade');
+        // Ketik manual nama barang & input sumber bantuan (pemerintah/dana desa)
+        $table->string('nama_barang'); 
+        $table->string('sumber_bantuan');
+        $table->integer('jumlah_bantuan');
         
-        $table->integer('jumlah_bantuan'); 
-        $table->text('alasan_keperluan'); 
-        
-        // Status alur hybrid
-        $table->enum('status', ['pending', 'disetujui', 'ditolak', 'disalurkan'])->default('pending');
-        
-        // Membedakan input Mandiri (warga) vs Distribusi Langsung (admin ke lansia)
-        $table->enum('sumber_input', ['warga', 'admin'])->default('warga');
-        
-        // Mencatat user admin yang memproses/membagikan barang
-        $table->foreignId('diproses_oleh')->nullable()->constrained('users')->onDelete('set null');
+        $table->text('alasan_keperluan')->nullable();
+        $table->string('status')->default('pending'); // pending, diproses, disetujui, selesai
+        $table->string('sumber_input')->default('admin');
+        $table->foreignId('diproses_oleh')->nullable()->constrained('users');
         $table->timestamp('disalurkan_pada')->nullable();
+        
         $table->timestamps();
     });
+
 }
 
     public function down(): void

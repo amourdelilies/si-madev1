@@ -1,0 +1,11 @@
+<?php
+
+namespace App\Filament\Resources\InventarisResource\Pages;
+
+use App\Filament\Resources\InventarisResource;
+use Filament\Resources\Pages\CreateRecord;
+
+class CreateInventaris extends CreateRecord
+{
+    protected static string $resource = InventarisResource::class;
+}

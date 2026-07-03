@@ -29,24 +29,24 @@ class BantuanLumbungDesaResource extends Resource
                     ->schema([
                         // 1. Pilih Warga Penerima (Bisa cari berdasarkan Nama/NIK)
                         Forms\Components\Select::make('penduduk_id')
-                            ->relationship('penduduk', 'nama')
-                            ->searchable()
-                            ->preload()
-                            ->label('Nama Warga / Penerima')
-                            ->required(),
+                        ->relationship('penduduk', 'nama_lengkap') // <-- Disesuaikan dengan kolom asli databasemu
+                        ->searchable()
+                        ->preload()
+                        ->label('Nama Warga / Penerima')
+                        ->required(),
 
                         // 2. Pilih Komoditas Sembako dari Lumbung yang Tersedia
-                        Forms\Components\Select::make('lumbung_desa_id')
-                            ->relationship('lumbungDesa', 'nama_barang')
-                            ->label('Komoditas Pangan')
-                            ->required(),
+                        Forms\Components\TextInput::make('nama_barang') // <-- Ubah nama kolomnya menjadi string biasa
+    ->label('Nama Barang / Jenis Bantuan')
+    ->placeholder('Contoh: Beras Bulog 10 Kg, Kursi Roda Pemprov, dll.')
+    ->required(),
 
                         // 3. Jumlah Bantuan yang diberikan
                         Forms\Components\TextInput::make('jumlah_bantuan')
                             ->numeric()
                             ->label('Jumlah / Kuantitas')
                             ->required()
-                            ->minReturnValue(1),
+                            ->minValue(1),
 
                         // 4. Keterangan atau Alasan Alokasi
                         Forms\Components\Textarea::make('alasan_keperluan')
@@ -64,6 +64,43 @@ class BantuanLumbungDesaResource extends Resource
                             ])
                             ->default('disalurkan') // Set default disalurkan jika diinput admin
                             ->required(),
+
+
+                            // 1. Tambahkan dropdown Sumber Bantuan setelah memilih barang
+Forms\Components\Select::make('sumber_bantuan')
+->label('Sumber Bantuan')
+->options([
+    'Pemerintah Pusat' => 'Pemerintah Pusat (APBN / Bansos)',
+    'Pemerintah Daerah' => 'Pemerintah Daerah (APBD)',
+    'Dana Desa' => 'Alokasi Dana Desa (ADD)',
+    'Swadaya' => 'Swadaya / CSR / Sumbangan',
+])
+->required()
+->searchable(),
+
+// 2. Tambahkan Keterangan Tambahan untuk nomor program pemerintah jika ada
+Forms\Components\TextInput::make('keterangan_program')
+->label('Nama Program / No. SK')
+->placeholder('Contoh: BLT Pangan Tahap II / Bantuan Poktan 2026')
+->nullable(),
+
+// 📸 Dokumentasi Pihak Desa
+Forms\Components\FileUpload::make('foto_penyerahan_desa')
+    ->label('Bukti Penyerahan oleh Perangkat Desa')
+    ->disk('public') // 🟢 WAJIB TAMBAHKAN INI
+    ->directory('dokumentasi-lumbung/desa')
+    ->image()
+    ->maxSize(2048)
+    ->nullable(),
+
+// 📸 Dokumentasi Pihak Warga
+Forms\Components\FileUpload::make('foto_penerimaan_warga')
+    ->label('Bukti Penerimaan oleh Warga')
+    ->disk('public') // 🟢 WAJIB TAMBAHKAN INI
+    ->directory('dokumentasi-lumbung/warga')
+    ->image()
+    ->maxSize(2048)
+    ->nullable(),
 
                         // Hidden Input untuk menandai bahwa ini inputan Top-Down dari Admin
                         Forms\Components\Hidden::make('sumber_input')
@@ -84,13 +121,14 @@ class BantuanLumbungDesaResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('penduduk.nama')
-                    ->label('Nama Penerima')
-                    ->searchable()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('lumbungDesa.nama_barang')
-                    ->label('Komoditas')
-                    ->sortable(),
+                Tables\Columns\TextColumn::make('penduduk.nama_lengkap') // <-- Menggunakan nama_lengkap
+    ->label('Nama Penerima')
+    ->searchable()
+    ->sortable(),
+    Tables\Columns\TextColumn::make('nama_barang')
+    ->label('Nama Barang / Jenis Bantuan')
+    ->searchable()
+    ->sortable(),
                 Tables\Columns\TextColumn::make('jumlah_bantuan')
                     ->label('Jumlah')
                     ->alignCenter(),
