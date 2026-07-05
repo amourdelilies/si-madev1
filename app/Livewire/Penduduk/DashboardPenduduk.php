@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 use App\Models\Penduduk;
 use App\Models\PengajuanSurat;
 use App\Models\Pengaduan; 
-use App\Models\BantuanLumbungDesa; // Pastikan model ini di-import
+use App\Models\BantuanLumbungDesa;
 use Livewire\Attributes\Layout;
 use Livewire\WithFileUploads; 
 
@@ -20,6 +20,9 @@ class DashboardPenduduk extends Component
     public $jenis_surat, $keperluan;
     public $bukti_pendukung = []; 
     public $activeTab = 'profil'; 
+    public $data_kustom = [];
+    public $dynamicFormFields = [];
+    public $dynamicUploadFields = [];
 
     // Properti Donasi Lumbung Desa (Swadaya Warga)
     public $nama_donasi, $jumlah_donasi, $keterangan_donasi;
@@ -47,42 +50,143 @@ class DashboardPenduduk extends Component
         return redirect()->route('registrasi');
     }
 
-    public function updatedJenisSurat()
+    public function updatedJenisSurat($value)
     {
         $this->bukti_pendukung = [];
+        $this->data_kustom = [];
+        $this->dynamicFormFields = [];
+        $this->dynamicUploadFields = [];
+
+        // 🌟 PEMETAAN LENGKAP 8 PERSYARATAN DAN INPUT FORM DINAMIS SCALABLE
+        $konfigurasiSurat = [
+            'Surat Keterangan Usaha (SKU)' => [
+                'form' => [
+                    ['name' => 'nama_usaha', 'label' => 'Nama Usaha', 'type' => 'text', 'required' => true, 'placeholder' => 'Contoh: Toko Melati'],
+                    ['name' => 'jenis_usaha', 'label' => 'Jenis Usaha / Sektor', 'type' => 'text', 'required' => true, 'placeholder' => 'Contoh: Sembako / Kuliner'],
+                    ['name' => 'lama_usaha', 'label' => 'Tanggal Mulai Usaha', 'type' => 'date', 'required' => true, 'placeholder' => 'Contoh: 3 Tahun / Sejak 2023'],
+                    ['name' => 'alamat_usaha', 'label' => 'Alamat Lengkap Tempat Usaha', 'type' => 'text', 'required' => true, 'placeholder' => 'Contoh: Banjar Dinas Semeton'],
+                ],
+                'upload' => [
+                    ['name' => 'foto_usaha', 'label' => 'Foto Fisik Tempat Usaha', 'required' => true, 'accept' => '.jpg,.jpeg,.png', 'max' => '2MB'],
+                    ['name' => 'pengantar_rt', 'label' => 'Surat Pengantar RT/Banjar', 'required' => false, 'accept' => '.jpg,.jpeg,.png,.pdf', 'max' => '2MB'],
+                ]
+            ],
+            'Surat Keterangan Tidak Mampu (SKTM)' => [
+                'form' => [
+                    ['name' => 'peruntukan_sktm', 'label' => 'Peruntukan SKTM', 'type' => 'select', 'required' => true, 'options' => ['Beasiswa Pendidikan', 'BPJS Kesehatan', 'Bantuan Sosial']],
+                ],
+                'upload' => [
+                    ['name' => 'pengantar_rt', 'label' => 'Surat Pengantar RT/Banjar', 'required' => true, 'accept' => '.jpg,.jpeg,.png,.pdf', 'max' => '2MB'],
+                    ['name' => 'foto_rumah', 'label' => 'Foto Rumah Tinggal (Tampak Depan)', 'required' => false, 'accept' => '.jpg,.jpeg,.png', 'max' => '2MB'],
+                ]
+            ],
+            'Surat Keterangan Domisili' => [
+                'form' => [
+                    ['name' => 'alamat_domisili_sekarang', 'label' => 'Alamat Domisili Sekarang', 'type' => 'text', 'required' => true, 'placeholder' => 'Alamat lengkap tempat tinggal sekarang'],
+                    ['name' => 'lama_tinggal', 'label' => 'Lama Tinggal', 'type' => 'text', 'required' => true, 'placeholder' => 'Contoh: 1 Tahun / 6 Bulan'],
+                ],
+                'upload' => [
+                    ['name' => 'bukti_tinggal', 'label' => 'Bukti Tempat Tinggal (Sewa/Kos/Sertifikat)', 'required' => true, 'accept' => '.jpg,.jpeg,.png,.pdf', 'max' => '2MB'],
+                    ['name' => 'pengantar_rt', 'label' => 'Surat Pengantar RT/Banjar', 'required' => true, 'accept' => '.jpg,.jpeg,.png,.pdf', 'max' => '2MB'],
+                ]
+            ],
+            'Surat Pengantar SKCK' => [
+                'form' => [
+                    ['name' => 'peruntukan_skck', 'label' => 'Keperluan SKCK', 'type' => 'select', 'required' => true, 'options' => ['Melamar Pekerjaan Swasta', 'Pendaftaran CPNS / BUMN', 'Melanjutkan Pendidikan', 'Lainnya']],
+                ],
+                'upload' => [
+                    ['name' => 'pas_foto', 'label' => 'Pas Foto Berwarna Terbaru (4x6)', 'required' => true, 'accept' => '.jpg,.jpeg,.png', 'max' => '2MB'],
+                ]
+            ],
+            'Surat Pindah' => [
+                'form' => [
+                    ['name' => 'alamat_asal', 'label' => 'Alamat Asal Lengkap', 'type' => 'text', 'required' => true, 'placeholder' => 'Alamat asal sebelum pindah'],
+                    ['name' => 'alamat_tujuan', 'label' => 'Alamat Tujuan Pindah', 'type' => 'text', 'required' => true, 'placeholder' => 'Alamat lengkap daerah tujuan baru'],
+                    ['name' => 'alasan_pindah', 'label' => 'Alasan Pindah', 'type' => 'text', 'required' => true, 'placeholder' => 'Contoh: Pekerjaan / Urusan Keluarga'],
+                ],
+                'upload' => [
+                    ['name' => 'pengantar_rt', 'label' => 'Surat Pengantar RT/Banjar', 'required' => true, 'accept' => '.jpg,.jpeg,.png,.pdf', 'max' => '2MB'],
+                ]
+            ],
+            'Surat Keterangan Kematian' => [
+                'form' => [
+                    ['name' => 'nama_almarhum', 'label' => 'Nama Lengkap Almarhum', 'type' => 'text', 'required' => true, 'placeholder' => 'Nama mendiang'],
+                    ['name' => 'tanggal_meninggal', 'label' => 'Tanggal Meninggal', 'type' => 'date', 'required' => true, 'placeholder' => ''],
+                    ['name' => 'tempat_meninggal', 'label' => 'Tempat Meninggal', 'type' => 'text', 'required' => true, 'placeholder' => 'Contoh: RS Sanglah / Rumah Tinggal'],
+                    ['name' => 'penyebab_meninggal', 'label' => 'Penyebab Meninggal', 'type' => 'text', 'required' => true, 'placeholder' => 'Contoh: Sakit / Usia Tua / Kecelakaan'],
+                ],
+                'upload' => [
+                    ['name' => 'surat_rs', 'label' => 'Surat Keterangan Dokter / RS', 'required' => false, 'accept' => '.pdf,.jpg,.jpeg', 'max' => '2MB'],
+                    ['name' => 'pengantar_rt', 'label' => 'Surat Keterangan Banjar/RT', 'required' => true, 'accept' => '.jpg,.jpeg,.png,.pdf', 'max' => '2MB'],
+                ]
+            ],
+            'Surat Keterangan Ahli Waris' => [
+                'form' => [
+                    ['name' => 'nama_pewaris', 'label' => 'Nama Lengkap Pewaris (Almarhum)', 'type' => 'text', 'required' => true, 'placeholder' => 'Nama almarhum pewaris aset'],
+                    ['name' => 'daftar_ahli_waris', 'label' => 'Daftar Nama Ahli Waris', 'type' => 'text', 'required' => true, 'placeholder' => 'Contoh: Anak 1, Anak 2 (Pisahkan dengan koma)'],
+                ],
+                'upload' => [
+                    ['name' => 'akta_kematian', 'label' => 'Scan Akta Kematian', 'required' => true, 'accept' => '.pdf,.jpg,.jpeg', 'max' => '2MB'],
+                    ['name' => 'pengantar_rt', 'label' => 'Surat Pengantar RT/Banjar', 'required' => true, 'accept' => '.jpg,.jpeg,.png,.pdf', 'max' => '2MB'],
+                ]
+            ],
+            'Surat Keterangan Kelahiran' => [
+                'form' => [
+                    ['name' => 'nama_bayi', 'label' => 'Nama Lengkap Bayi', 'type' => 'text', 'required' => true, 'placeholder' => 'Nama anak yang baru lahir'],
+                    ['name' => 'tanggal_lahir_bayi', 'label' => 'Tanggal Lahir Bayi', 'type' => 'date', 'required' => true, 'placeholder' => ''],
+                    ['name' => 'tempat_lahir_bayi', 'label' => 'Tempat Lahir Bayi', 'type' => 'text', 'required' => true, 'placeholder' => 'Contoh: Denpasar / Klinik Bersalin'],
+                    ['name' => 'nama_ayah', 'label' => 'Nama Lengkap Ayah', 'type' => 'text', 'required' => true, 'placeholder' => 'Nama ayah kandung'],
+                    ['name' => 'nama_ibu', 'label' => 'Nama Lengkap Ibu', 'type' => 'text', 'required' => true, 'placeholder' => 'Nama ibu kandung'],
+                ],
+                'upload' => [
+                    ['name' => 'surat_bidan', 'label' => 'Surat Keterangan Lahir Bidan/RS', 'required' => true, 'accept' => '.pdf,.jpg,.jpeg', 'max' => '2MB'],
+                ]
+            ],
+        ];
+
+        if (array_key_exists($value, $konfigurasiSurat)) {
+            $this->dynamicFormFields = $konfigurasiSurat[$value]['form'];
+            $this->dynamicUploadFields = $konfigurasiSurat[$value]['upload'];
+        }
     }
 
     public function ajukanSurat()
     {
-        $rules = [
+        $validationRules = [
             'jenis_surat' => 'required',
             'keperluan' => 'required|string|min:5',
         ];
 
-        if ($this->jenis_surat === 'Surat Keterangan Domisili') {
-            $rules['bukti_pendukung.pengantar_rt'] = 'required|file|mimes:jpg,jpeg,png,pdf|max:2048';
-        } elseif ($this->jenis_surat === 'Surat Keterangan Usaha (SKU)') {
-            $rules['bukti_pendukung.foto_usaha'] = 'required|file|mimes:jpg,jpeg,png|max:2048';
-            $rules['bukti_pendukung.nota_insidentil'] = 'required|file|mimes:jpg,jpeg,png,pdf|max:2048';
-        } elseif ($this->jenis_surat === 'Surat Keterangan Tidak Mampu (SKTM)') {
-            $rules['bukti_pendukung.pengantar_rt'] = 'required|file|mimes:jpg,jpeg,png,pdf|max:2048';
-            $rules['bukti_pendukung.foto_rumah'] = 'required|file|mimes:jpg,jpeg,png|max:2048';
-        } elseif ($this->jenis_surat === 'Surat Keterangan Kelakuan Baik') {
-            $rules['bukti_pendukung.rekomendasi_banjar'] = 'required|file|mimes:jpg,jpeg,png,pdf|max:2048';
+        foreach ($this->dynamicFormFields as $field) {
+            if ($field['required']) {
+                $validationRules['data_kustom.' . $field['name']] = 'required';
+            }
         }
 
-        $this->validate($rules);
+        foreach ($this->dynamicUploadFields as $upload) {
+            if ($upload['required']) {
+                $validationRules['bukti_pendukung.' . $upload['name']] = 'required|file|max:2048';
+            }
+        }
+
+        $this->validate($validationRules);
 
         $pendudukFisik = Penduduk::where('user_id', Auth::id())->first();
 
         if ($pendudukFisik) {
-            $jenisSuratId = match ($this->jenis_surat) {
-                'Surat Keterangan Domisili'            => 1,
-                'Surat Keterangan Usaha (SKU)'         => 2,
-                'Surat Keterangan Tidak Mampu (SKTM)'  => 3,
-                'Surat Keterangan Kelakuan Baik'       => 4,
-                default                                => 1,
-            };
+           // 🌟 Pemetaan ID Jenis Surat Berurutan Sesuai Database Seeder Terbaru
+           $jenisSuratId = match ($this->jenis_surat) {
+            'Surat Keterangan Domisili'           => 1,
+            'Surat Keterangan Usaha (SKU)'        => 2,
+            'Surat Keterangan Tidak Mampu (SKTM)' => 3,
+            'Surat Keterangan Kelakuan Baik'      => 4,
+            'Surat Pengantar SKCK'                => 5,
+            'Surat Pindah'                        => 6,
+            'Surat Keterangan Kematian'           => 7,
+            'Surat Keterangan Ahli Waris'         => 8,
+            'Surat Keterangan Kelahiran'          => 9,
+            default                               => 1,
+        };
 
             $uploadedPaths = [];
             foreach ($this->bukti_pendukung as $key => $file) {
@@ -102,16 +206,14 @@ class DashboardPenduduk extends Component
                 'keperluan'        => $this->keperluan, 
                 'status'           => 'pending',
                 'bukti_pendukung'  => json_encode($uploadedPaths), 
+                'data_kustom'      => json_encode($this->data_kustom), 
             ]);
 
-            $this->reset(['jenis_surat', 'keperluan', 'bukti_pendukung']);
-            session()->flash('message', 'Pengajuan surat berhasil dikirim! Silakan tunggu verifikasi berkas oleh Perangkat Desa.');
+            $this->reset(['jenis_surat', 'keperluan', 'bukti_pendukung', 'data_kustom', 'dynamicFormFields', 'dynamicUploadFields']);
+            session()->flash('message', 'Pengajuan surat dinamis berhasil dikirim ke server desa!');
         }
     }
 
-    /**
-     * 🟢 FITUR BARU: Proses Rencana Donasi Hasil Panen/Bumi dari Warga
-     */
     public function donasikanBarang()
     {
         $this->validate([
@@ -124,11 +226,9 @@ class DashboardPenduduk extends Component
         $pendudukFisik = Penduduk::where('user_id', Auth::id())->first();
 
         if ($pendudukFisik) {
-            // Beri nama file unik untuk foto barang donasi
             $filename = 'donasi_' . time() . '.' . $this->foto_donasi->getClientOriginalExtension();
             $pathFoto = $this->foto_donasi->storeAs('dokumentasi-lumbung/warga', $filename, 'public');
 
-            // Simpan rencana donasi masuk dengan status 'pending' dan sumber_input 'warga'
             BantuanLumbungDesa::create([
                 'penduduk_id' => $pendudukFisik->id,
                 'nama_barang' => $this->nama_donasi,
@@ -159,16 +259,14 @@ class DashboardPenduduk extends Component
             ? PengajuanSurat::where('penduduk_id', $dataPenduduk->id)->latest()->get() 
             : collect();
 
-        // 1. Ambil data riwayat kontribusi donasi yang dikirim oleh warga ini
         $riwayatDonasi = $dataPenduduk 
             ? BantuanLumbungDesa::where('penduduk_id', $dataPenduduk->id)->where('sumber_input', 'warga')->latest()->get()
             : collect();
 
-        // 🟢 2. TAMBAHKAN INI: Ambil riwayat bantuan yang DITERIMA warga dari admin desa
         $riwayatPenerimaan = $dataPenduduk
             ? BantuanLumbungDesa::where('penduduk_id', $dataPenduduk->id)
-                ->where('sumber_input', '!=', 'warga') // mengambil inputan admin
-                ->where('status', 'disalurkan') // hanya yang sudah resmi disalurkan
+                ->where('sumber_input', '!=', 'warga')
+                ->where('status', 'disalurkan')
                 ->latest()
                 ->get()
             : collect();
@@ -178,7 +276,7 @@ class DashboardPenduduk extends Component
             'riwayatSurat' => $riwayatSurat,
             'daftarPengaduan' => $daftarPengaduan,
             'riwayatDonasi' => $riwayatDonasi, 
-            'riwayatPenerimaan' => $riwayatPenerimaan, // 🟢 Oper ke blade
+            'riwayatPenerimaan' => $riwayatPenerimaan,
         ]);
     }
 }

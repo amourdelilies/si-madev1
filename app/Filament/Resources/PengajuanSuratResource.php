@@ -9,6 +9,11 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Tables\Actions\Action;
+use Filament\Tables\Actions\ActionGroup;
+use Illuminate\Support\Facades\Storage;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 
 class PengajuanSuratResource extends Resource
 {
@@ -38,7 +43,7 @@ class PengajuanSuratResource extends Resource
                             ->disabled()
                             ->columnSpanFull(),
 
-                        // Tampilan Berkas Warga yang Sudah Menggunakan Layout Card & Bold Text
+                        // Tampilan Berkas Warga
                         Forms\Components\Placeholder::make('bukti_pendukung')
                             ->label('Dokumen Persyaratan Wajib (Berkas Warga)')
                             ->content(fn ($record) => 
@@ -84,7 +89,7 @@ class PengajuanSuratResource extends Resource
                     ])->columns(2),
                 ])->columnSpan(2),
 
-                // Kanan: Validasi Status, Nomor Surat, & FileUpload yang Benar
+                // Kanan: Validasi Status, Nomor Surat, & FileUpload
                 Forms\Components\Group::make()->schema([
                     Forms\Components\Card::make()->schema([
                         Forms\Components\Select::make('status')
@@ -100,7 +105,6 @@ class PengajuanSuratResource extends Resource
                             ->placeholder('Contoh: 400/12/Desa-2026')
                             ->helperText('Isi jika status disetujui'),
                             
-                        // 🌟 JALUR PDF SEKARANG SUDAH DI TEMPAT YANG BENAR (MUNCUL JIKA DISETUJUI)
                         Forms\Components\FileUpload::make('jalur_pdf')
                             ->label('Unggah Surat Resmi (PDF)')
                             ->directory('surat_keluar')
@@ -159,7 +163,91 @@ class PengajuanSuratResource extends Resource
                     ])
             ])
             ->actions([
+                // Aksi manual bawaan kamu
                 Tables\Actions\EditAction::make()->label('Proses Surat'),
+
+                // 🌟 GRUP AKSI OTOMATISASI BARU (PREVIEW & GENERATE PDF)
+                ActionGroup::make([
+                    
+                    // 🧐 1. TOMBOL PREVIEW SURAT MENTAH
+                    Action::make('preview_surat')
+                        ->label('Preview Surat')
+                        ->icon('heroicon-o-eye')
+                        ->color('info')
+                        ->modalHeading('Pratinjau Dokumen Surat')
+                        ->modalSubmitAction(false)
+                        ->modalContent(fn ($record) => view('surat.preview', [
+                            'record' => $record,
+                            'data_surat' => json_decode($record->data_kustom, true) ?? [],
+                            'warga' => $record->penduduk
+                        ])),
+
+                    // ✔ 2. TOMBOL SETUJUI & GENERATE PDF FINAL
+                    Action::make('setujui_otomatis')
+                        ->label('Setujui & Buat PDF')
+                        ->icon('heroicon-o-check-circle')
+                        ->color('success')
+                        ->requiresConfirmation()
+                        ->hidden(fn ($record) => $record->status !== 'pending')
+                        ->action(function ($record) {
+                            $tahun = Carbon::now()->year;
+                            
+                            // Generator Bulan Romawi
+                            $array_bln = [1=>'I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
+                            $bulanRomawi = $array_bln[Carbon::now()->month];
+                            
+                            // Hitung total surat disetujui tahun ini untuk penomoran urut
+                            $urutanSurat = PengajuanSurat::whereYear('created_at', $tahun)
+                                ->where('status', 'disetujui')
+                                ->count() + 1;
+                            
+                            // Penomoran otomatis: 470/015/VII/2026
+                            $nomorOtomatis = sprintf("470/%03d/%s/%d", $urutanSurat, $bulanRomawi, $tahun);
+
+                            // Pemetaan slug berdasarkan database di Screenshot 2026-07-04 at 15.10.32.png
+                            $slugSurat = strtolower($record->jenisSurat->slug ?? 'standar');
+                            
+                            $templatePath = match ($slugSurat) {
+                                'document', 'surat-keterangan-domisili'         => 'surat.template_domisili',
+                                'surat-keterangan-usaha-sku'        => 'surat.template_sku',
+                                'surat-keterangan-tidak-mampu-sktm' => 'surat.template_sktm',
+                                'surat-keterangan-kelakuan-baik'    => 'surat.template_kelakuan_baik',
+                                default                             => 'surat.template_standar',
+                            };
+
+                            // Pengikatan data untuk disuntikkan ke template blade HTML
+                            $dataUntukPdf = [
+                                'nomor_surat'   => $nomorOtomatis,
+                                'warga'         => $record->penduduk,
+                                'data_surat'    => json_decode($record->data_kustom, true) ?? [],
+                                'tanggal_cetak' => Carbon::now()->translatedFormat('d F Y'),
+                            ];
+
+                            // Proses konversi HTML ke PDF ukuran A4 Portrait lewat DomPDF
+                            $pdf = Pdf::loadView($templatePath, $dataUntukPdf)->setPaper('a4', 'portrait');
+
+                            // Penamaan file berkas fisik di folder storage
+                            $namaFile = strtoupper(str_replace('-', '_', $slugSurat)) . "-{$tahun}-" . sprintf("%03d", $urutanSurat) . ".pdf";
+                            $pathSimpan = "surat_keluar/" . $namaFile;
+
+                            // Simpan file ke storage/app/public/surat_keluar/
+                            Storage::put("public/" . $pathSimpan, $pdf->output());
+
+                            // Simpan perubahan ke database pengajuan warga
+                            $record->update([
+                                'status'      => 'disetujui',
+                                'nomor_surat' => $nomorOtomatis,
+                                'jalur_pdf'   => $pathSimpan,
+                            ]);
+
+                            // Tampilkan notifikasi balon sukses di pojok atas admin panel
+                            \Filament\Notifications\Notification::make()
+                                ->title('Surat Berhasil Diarsip!')
+                                ->body("Nomor {$nomorOtomatis} telah terbit dan tersimpan otomatis.")
+                                ->success()
+                                ->send();
+                        }),
+                ])->label('Otomatisasi')->icon('heroicon-m-cog-6-tooth')->color('warning')
             ]);
     }
 

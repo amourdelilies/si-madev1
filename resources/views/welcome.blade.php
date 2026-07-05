@@ -32,7 +32,7 @@
                     </div>
                     <div>
                         <span class="text-sm font-black text-gray-800 tracking-tight block">SI-MADE</span>
-                        <span class="text-[10px] text-gray-400 font-semibold block -mt-1">Sistem Digitalisasi Manajemen Desa</span>
+                        <span class="text-[10px] text-gray-400 font-semibold block -mt-1">Sistem Informasi Manajemen Desa</span>
                     </div>
                 </a>
 

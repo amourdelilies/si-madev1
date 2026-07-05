@@ -14,7 +14,7 @@
     @if($penduduk)
         <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
             
-            <!-- 🧭 SIDEBAR NAVIGASI (BORDER TEBAL & SHADOW MD) -->
+            <!-- 🧭 SIDEBAR NAVIGASI -->
             <div class="md:col-span-3 bg-white p-4 rounded-2xl border-2 border-gray-200/80 shadow-md space-y-1">
                 <p class="text-[10px] font-bold text-slate-400 uppercase px-3 mb-2 tracking-wider">Navigasi Layanan</p>
                 
@@ -31,7 +31,7 @@
                             'bg-amber-50 text-amber-800 border-l-4 border-amber-500 pl-2' => $activeTab === $tab,
                             'text-slate-600 hover:bg-slate-50/80' => $activeTab !== $tab,
                             'opacity-40 cursor-not-allowed text-slate-400 hover:bg-transparent' => $tab === 'surat' && !$penduduk->is_aktif
-                        ])>
+                        ]) Granger>
                         <div class="flex items-center gap-3">
                             <x-dynamic-component :component="'heroicon-o-' . $data['icon']" class="w-4 h-4 text-slate-400" />
                             {{ $data['label'] }}
@@ -48,8 +48,6 @@
 
                 <!-- KONTEN TAB PROFIL WARGA -->
                 @if($activeTab === 'profil')
-                    
-                    <!-- Alert Status Validasi (BORDER LEBIH TEBAL) -->
                     <div @class([
                         'p-4 rounded-2xl flex items-center justify-between shadow-md bg-white border-2 mb-6',
                         'bg-emerald-50/60 border-emerald-200 text-emerald-900' => $penduduk->is_aktif,
@@ -71,7 +69,6 @@
                         </span>
                     </div>
 
-                    <!-- CARD PROFIL (BORDER 2 & SHADOW MD) -->
                     <div class="bg-white p-6 rounded-2xl border-2 border-gray-200/80 shadow-md space-y-5">
                         <div class="flex items-center justify-between border-b-2 border-slate-100 pb-3">
                             <h3 class="text-sm font-black text-slate-800 uppercase tracking-tight flex items-center gap-2">
@@ -97,7 +94,6 @@
 
                 <!-- KONTEN TAB LAYANAN SURAT -->
                 @if($activeTab === 'surat' && $penduduk->is_aktif)
-                    <!-- FORM SURAT (BORDER 2 & SHADOW MD) -->
                     <div class="bg-white p-6 rounded-2xl border-2 border-gray-200/80 shadow-md space-y-4">
                         <h3 class="text-sm font-black text-slate-800 border-b-2 border-slate-100 pb-3 uppercase tracking-tight flex items-center gap-2">
                             <span class="w-1.5 h-3 bg-amber-500 rounded-sm"></span> Formulir Permohonan Surat
@@ -115,34 +111,82 @@
                                     <label class="block text-xs font-semibold text-slate-600 mb-1">Pilih Jenis Surat <span class="text-red-500">*</span></label>
                                     <select wire:model.live="jenis_surat" required class="w-full rounded-xl border-gray-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 text-xs">
                                         <option value="">-- Pilih Jenis Surat --</option>
-                                        @foreach(['Surat Keterangan Domisili', 'Surat Keterangan Usaha (SKU)', 'Surat Keterangan Tidak Mampu (SKTM)', 'Surat Keterangan Kelakuan Baik'] as $opsi)
-                                            <option value="{{ $opsi }}">{{ $opsi }}</option>
-                                        @endforeach
+                                        <option value="Surat Keterangan Domisili">Surat Keterangan Domisili</option>
+                                        <option value="Surat Keterangan Usaha (SKU)">Surat Keterangan Usaha (SKU)</option>
+                                        <option value="Surat Keterangan Tidak Mampu (SKTM)">Surat Keterangan Tidak Mampu (SKTM)</option>
+                                        <option value="Surat Pengantar SKCK">Surat Pengantar SKCK</option>
+                                        <option value="Surat Pindah">Surat Pindah</option>
+                                        <option value="Surat Keterangan Kematian">Surat Keterangan Kematian</option>
+                                        <option value="Surat Keterangan Ahli Waris">Surat Keterangan Ahli Waris</option>
+                                        <option value="Surat Keterangan Kelahiran">Surat Keterangan Kelahiran</option>
                                     </select>
+                                    @error('jenis_surat') <span class="text-[10px] text-red-500 block font-medium mt-1">* {{ $message }}</span> @enderror
                                 </div>
                                 <div class="md:col-span-2">
                                     <label class="block text-xs font-semibold text-slate-600 mb-1">Keperluan / Alasan Pengajuan <span class="text-red-500">*</span></label>
                                     <input type="text" wire:model="keperluan" required placeholder="Contoh: Syarat pengajuan beasiswa / Syarat membuat KUR" class="w-full rounded-xl border-gray-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 text-xs">
+                                    @error('keperluan') <span class="text-[10px] text-red-500 block font-medium mt-1">* {{ $message }}</span> @enderror
                                 </div>
                             </div>
 
-                            @if($jenis_surat)
-                                <div class="bg-slate-50/70 p-4 rounded-xl border border-gray-200 space-y-4 animate-in fade-in duration-300">
-                                    <p class="text-xs font-bold text-slate-700">📎 Unggah Dokumen Persyaratan Wajib (Maks. 2MB per file)</p>
+                            <!-- ================================================================= -->
+                            <!-- 🌟 CARD INTERAKTIF: INPUT FORM DINAMIS (DI-RENDER OTOMATIS) 🌟     -->
+                            <!-- ================================================================= -->
+                            @if(!empty($dynamicFormFields))
+                                <div class="bg-slate-50/80 p-5 rounded-2xl border border-slate-200 space-y-4 animate-in fade-in duration-300">
+                                    <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wide flex items-center gap-1.5">
+                                        <span class="w-1 h-2.5 bg-orange-500 rounded-sm"></span> Informasi Detail Pengisian Formulir
+                                    </h4>
+                                    
                                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        @php
-                                            $syarat = [
-                                                'Surat Keterangan Domisili' => ['pengantar_rt' => 'Scan Surat Pengantar RT/RW'],
-                                                'Surat Keterangan Usaha (SKU)' => ['foto_usaha' => 'Foto Fisik Tempat Usaha', 'nota_insidentil' => 'Nota Pembelian Bahan Usaha'],
-                                                'Surat Keterangan Tidak Mampu (SKTM)' => ['pengantar_rt' => 'Scan Surat Pengantar RT/RW', 'foto_rumah' => 'Foto Rumah Tinggal (Tampak Front)'],
-                                                'Surat Keterangan Kelakuan Baik' => ['rekomendasi_banjar' => 'Surat Rekomendasi Kelian Banjar Dinas']
-                                            ];
-                                        @endphp
-                                        @foreach($syarat[$jenis_surat] as $key => $label)
-                                            <div class="space-y-1">
-                                                <label class="block text-[11px] font-semibold text-slate-600">{{ $label }} <span class="text-red-500">*</span></label>
-                                                <input type="file" wire:model="bukti_pendukung.{{ $key }}" required class="block w-full text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:bg-amber-50 file:text-amber-800 hover:file:bg-amber-100 border border-gray-200 rounded-xl p-1 bg-white shadow-sm">
-                                                @error('bukti_pendukung.' . $key) <span class="text-[10px] text-red-500 block font-medium">* {{ $message }}</span> @enderror
+                                        @foreach($dynamicFormFields as $field)
+                                            <div class="{{ $field['type'] === 'textarea' ? 'sm:col-span-2' : '' }} space-y-1">
+                                                <label class="block text-[11px] font-semibold text-slate-600">
+                                                    {{ $field['label'] }} @if($field['required']) <span class="text-red-500">*</span> @endif
+                                                </label>
+                                                
+                                                @if($field['type'] === 'text' || $field['type'] === 'date')
+                                                    <input type="{{ $field['type'] }}" wire:model="data_kustom.{{ $field['name'] }}" {{ $field['required'] ? 'required' : '' }} placeholder="{{ $field['placeholder'] ?? '' }}" class="w-full rounded-xl border-gray-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 text-xs bg-white">
+                                                @elseif($field['type'] === 'select')
+                                                    <select wire:model="data_kustom.{{ $field['name'] }}" {{ $field['required'] ? 'required' : '' }} class="w-full rounded-xl border-gray-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 text-xs bg-white">
+                                                        <option value="">-- Pilih {{ $field['label'] }} --</option>
+                                                        @foreach($field['options'] as $opt)
+                                                            <option value="{{ $opt }}">{{ $opt }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                @endif
+                                                @error('data_kustom.' . $field['name']) <span class="text-[10px] text-red-500 block font-medium">* {{ $message }}</span> @enderror
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endif
+
+                            <!-- ================================================================= -->
+                            <!-- 🌟 CARD INTERAKTIF: AREA UPLOAD DINAMIS DENGAN CHECKLIST 🌟        -->
+                            <!-- ================================================================= -->
+                            @if(!empty($dynamicUploadFields))
+                                <div class="bg-slate-50/70 p-4 rounded-xl border border-gray-200 space-y-4 animate-in fade-in duration-300">
+                                    <p class="text-xs font-bold text-slate-700 flex items-center gap-1">
+                                        <span>📎 Dokumen Berkas Persyaratan Wajib</span>
+                                        <span class="text-[10px] text-slate-400 font-normal">(Maks. 2MB per file)</span>
+                                    </p>
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        @foreach($dynamicUploadFields as $upload)
+                                            <div class="space-y-1 bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                                                <div>
+                                                    <label class="block text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
+                                                        <span class="{{ isset($bukti_pendukung[$upload['name']]) ? 'text-emerald-500' : 'text-slate-300' }} font-bold text-xs">
+                                                            {{ isset($bukti_pendukung[$upload['name']]) ? '☑' : '☐' }}
+                                                        </span>
+                                                        {{ $upload['label'] }} 
+                                                        @if($upload['required']) <span class="text-red-500">*</span> @else <span class="text-slate-400 font-normal text-[9px]">(Opsional)</span> @endif
+                                                    </label>
+                                                    <span class="text-[9px] text-slate-400 block mt-0.5">Format: {{ str_replace('.', '', $upload['accept']) }} (Max {{ $upload['max'] }})</span>
+                                                </div>
+                                                
+                                                <input type="file" wire:model="bukti_pendukung.{{ $upload['name'] }}" {{ $upload['required'] ? 'required' : '' }} accept="{{ $upload['accept'] }}" class="block w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-bold file:bg-amber-50 file:text-amber-800 hover:file:bg-amber-100 border border-gray-100 rounded-lg p-1 bg-slate-50/50 mt-2">
+                                                @error('bukti_pendukung.' . $upload['name']) <span class="text-[10px] text-red-500 block font-medium mt-1">* {{ $message }}</span> @enderror
                                             </div>
                                         @endforeach
                                     </div>
@@ -157,11 +201,11 @@
                         </form>
                     </div>
 
-                    <!-- TABEL STATUS SURAT (BORDER 2 & SHADOW MD) -->
+                    <!-- TABEL STATUS SURAT -->
                     <div class="bg-white rounded-2xl border-2 border-gray-200/80 shadow-md overflow-hidden">
                         <div class="bg-amber-500 px-6 py-4 flex items-center justify-between text-white">
                             <div>
-                                <h3 class="text-sm font-extrabold flex items-center gap-2">📄 Status Pengajuan Surat</h3>
+                                <h3 class="text-sm font-extrabold flex items-center gap-2"> Status Pengajuan Surat</h3>
                                 <p class="text-[11px] text-amber-50/90 mt-0.5 font-medium">Pantau berkas permohonan surat administrasi Anda di sini</p>
                             </div>
                             <span class="text-[10px] font-bold bg-amber-950/20 text-white px-2.5 py-1 rounded-xl border border-white/10">{{ $riwayatSurat->count() }} Permohonan</span>
@@ -220,13 +264,10 @@
                 <!-- KONTEN TAB LUMBUNG DESA -->
                 @if($activeTab === 'lumbung' && $penduduk->is_aktif)
                     <div class="space-y-6">
-                        <!-- TABEL RIWAYAT BANTUAN DITERIMA (BORDER 2 & SHADOW MD) -->
                         <div class="bg-white rounded-2xl border-2 border-gray-200/80 shadow-md overflow-hidden">
                             <div class="bg-amber-500 px-6 py-4 flex items-center justify-between text-white">
                                 <div>
-                                    <h3 class="text-sm font-extrabold flex items-center gap-2">
-                                         Riwayat Manfaat & Bantuan Diterima
-                                    </h3>
+                                    <h3 class="text-sm font-extrabold flex items-center gap-2">Riwayat Manfaat & Bantuan Diterima</h3>
                                     <p class="text-[11px] text-amber-50/95 mt-0.5 font-medium">Daftar bantuan resmi lumbung desa yang telah disalurkan kepada Anda</p>
                                 </div>
                                 <span class="text-[10px] font-bold bg-amber-950/20 text-white px-2.5 py-1 rounded-xl border border-white/10">{{ $riwayatPenerimaan->count() }} Paket</span>
