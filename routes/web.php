@@ -10,7 +10,7 @@ use App\Livewire\Pengaduan\RiwayatPengaduan;
 use App\Livewire\Pengaduan\DetailPengaduan;
 
 Route::get('/', function () {
-    return view('welcome');
+    return view('beranda.beranda');
 });
 
 Route::get('/registrasi', RegistrasiPenduduk::class)->name('registrasi');
@@ -53,3 +53,6 @@ Route::get('/warga/dashboard', DashboardPenduduk::class)
     
         return $pdf->stream("stiker-{$safeFileName}.pdf");
     })->name('inventaris.print-single');
+
+    // update farand
+    
