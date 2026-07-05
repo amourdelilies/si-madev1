@@ -224,22 +224,52 @@
                                 <tbody class="divide-y-2 divide-gray-100 text-slate-600">
                                     @forelse($riwayatSurat as $surat)
                                         <tr class="hover:bg-amber-50/20 transition">
-                                            <td class="p-4 font-medium">{{ $surat->created_at->format('d M Y') }}</td>
-                                            <td class="p-4 text-slate-900 font-bold flex items-center gap-2">
-                                                <span class="w-2 h-2 rounded-full bg-amber-400 shadow-sm"></span>
-                                                {{ $surat->jenis_surat }}
-                                            </td>
-                                            <td class="p-4 font-medium max-w-xs truncate text-slate-700">{{ $surat->keperluan }}</td>
-                                            <td class="p-4 text-center">
-                                                <span @class([
-                                                    'px-2.5 py-1 rounded-xl text-[9px] font-extrabold uppercase tracking-wide border',
-                                                    'bg-red-50 text-red-700 border-red-100' => $surat->status === 'ditolak',
-                                                    'bg-emerald-50 text-emerald-700 border-emerald-100' => in_array($surat->status, ['disetujui', 'selesai']),
-                                                    'bg-amber-50 text-amber-800 border-amber-100 animate-pulse' => !in_array($surat->status, ['ditolak', 'disetujui', 'selesai'])
-                                                ])>
-                                                    {{ $surat->status === 'disetujui' || $surat->status === 'selesai' ? 'Selesai' : ($surat->status === 'ditolak' ? 'Ditolak' : 'Diproses') }}
-                                                </span>
-                                            </td>
+                                        <tr class="hover:bg-amber-50/20 transition">
+    <td class="p-4 font-medium">{{ $surat->created_at->format('d M Y') }}</td>
+    <td class="p-4 text-slate-900 font-bold flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-amber-400 shadow-sm"></span>
+        {{ $surat->jenis_surat }}
+    </td>
+    <td class="p-4 font-medium max-w-xs truncate text-slate-700">{{ $surat->keperluan }}</td>
+    
+    <!-- 🌟 BAGIAN STATUS & TOMBOL AKSI YANG DIGANTI 🌟 -->
+    <td class="p-4 text-center">
+        <!-- 1. Badge Status -->
+        <div class="mb-2">
+            <span @class([
+                'px-2.5 py-1 rounded-xl text-[9px] font-extrabold uppercase tracking-wide border inline-block',
+                'bg-red-50 text-red-700 border-red-100' => $surat->status === 'ditolak',
+                'bg-emerald-50 text-emerald-700 border-emerald-100' => in_array($surat->status, ['disetujui', 'selesai']),
+                'bg-amber-50 text-amber-800 border-amber-100 animate-pulse' => !in_array($surat->status, ['ditolak', 'disetujui', 'selesai'])
+            ])>
+                {{ $surat->status === 'disetujui' || $surat->status === 'selesai' ? 'Selesai' : ($surat->status === 'ditolak' ? 'Ditolak' : 'Diproses') }}
+            </span>
+        </div>
+
+        <!-- 2. Tombol Preview & Download Muncul Otomatis Jika Disetujui -->
+        @if(in_array(strtolower($surat->status), ['disetujui', 'selesai']) && $surat->jalur_pdf)
+            <div class="flex items-center justify-center gap-1.5 mt-2">
+               <!-- Tombol Preview (Langsung menembak ke public folder) -->
+<a href="{{ asset($surat->jalur_pdf) }}" 
+   target="_blank" 
+   class="inline-flex items-center px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white text-[10px] font-bold rounded-lg shadow-sm transition gap-1">
+    👁️ Lihat
+</a>
+
+<!-- Tombol Unduh Berkas -->
+<a href="{{ asset($surat->jalur_pdf) }}" 
+   download 
+   class="inline-flex items-center px-2 py-1 bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-bold rounded-lg shadow-sm transition gap-1">
+    📥 Unduh
+</a>
+            </div>
+        @elseif(strtolower($surat->status) === 'ditolak' && $surat->catatan_admin)
+            <p class="text-[10px] text-red-500 italic max-w-[120px] mx-auto mt-1 line-clamp-2" title="{{ $surat->catatan_admin }}">
+                Ket: {{ $surat->catatan_admin }}
+            </p>
+        @endif
+    </td>
+</tr>
                                         </tr>
                                     @empty
                                         <tr>

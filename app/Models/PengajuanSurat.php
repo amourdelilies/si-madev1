@@ -11,13 +11,14 @@ class PengajuanSurat extends Model
 
     protected $table = 'pengajuan_surat';
 
-    // 🌟 KUNCI PENYELAMAT: Mendaftarkan semua kolom database agar diizinkan masuk oleh Laravel
+    // 🌟 Mendaftarkan data_kustom agar diizinkan masuk dan disimpan oleh Laravel
     protected $fillable = [
         'penduduk_id',
         'jenis_surat',
         'alasan_pengajuan',
         'jenis_surat_id',
         'keperluan',
+        'data_kustom', // 🌟 Selesai ditambahkan!
         'bukti_pendukung',
         'status',
         'catatan_admin',
