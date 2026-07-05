@@ -16,6 +16,9 @@ class PendudukResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-users';
     protected static ?string $navigationLabel = 'Data Penduduk';
     protected static ?string $pluralModelLabel = 'Data Penduduk';
+    
+    // 🌟 FIX ROUTE NOT FOUND: Mengunci nama rute agar Laravel mengenali 'penduduks.index'
+    protected static ?string $slug = 'penduduks';
 
     public static function form(Form $form): Form
     {
@@ -82,30 +85,80 @@ class PendudukResource extends Resource
                         ->columnSpanFull(),
                 ]),
 
-                // 🌟 BAGIAN BARU: Tempat pratinjau berkas digital yang di-upload warga
-                Forms\Components\Section::make('Berkas Digital Warga')->schema([
-                    Forms\Components\Placeholder::make('foto_preview')
-                        ->label('Berkas Foto KTP / KK Warga')
-                        ->content(function ($record) {
-                            // Jika warga belum mengunggah foto, tampilkan teks peringatan
-                            if (! $record || ! $record->foto) {
-                                return 'Warga belum mengunggah berkas digital.';
-                            }
+               // 🌟 FIX: Hanya memunculkan tombol aksi tanpa langsung menampilkan gambar di halaman
+               Forms\Components\Section::make('Berkas Digital Warga')->schema([
+                Forms\Components\Placeholder::make('foto_preview')
+                    ->label('Aksi Berkas Dokumen Warga')
+                    ->content(function ($record) {
+                        if (! $record || (! $record->foto_ktp && ! $record->foto_kk)) {
+                            return 'Warga belum mengunggah berkas digital.';
+                        }
 
-                            // Generate URL gambar asli dari storage public laptopmu
-                            $imageUrl = asset('storage/' . $record->foto);
+                        $ktpUrl = $record->foto_ktp ? asset('storage/' . $record->foto_ktp) : null;
+                        $kkUrl = $record->foto_kk ? asset('storage/' . $record->foto_kk) : null;
 
-                            // Menampilkan gambar langsung di halaman admin Filament
-                            return new \Illuminate\Support\HtmlString("
-                                <div class='mt-2'>
-                                    <a href='{$imageUrl}' target='_blank' title='Klik untuk memperbesar gambar'>
-                                        <img src='{$imageUrl}' class='max-w-md h-auto rounded-lg shadow-sm border border-gray-200 hover:opacity-90 transition duration-150' />
-                                    </a>
-                                    <p class='text-xs text-gray-400 mt-2'>💡 Tips: Klik pada gambar untuk melihat ukuran penuh di tab baru.</p>
-                                </div>
-                            ");
-                        })
-                        ->columnSpanFull(),
+                        $htmlOutput = "<div class='flex flex-col space-y-4 mt-2'>";
+
+                        // --- TOMBOL UNTUK KTP ---
+                        if ($ktpUrl) {
+                            $htmlOutput .= "
+                                <div class='flex items-center justify-between border border-gray-200 p-3 rounded-xl bg-gray-50/50 shadow-sm'>
+                                    <div class='flex items-center space-x-2'>
+                                        <span class='text-base'></span>
+                                        <span class='text-sm font-medium text-gray-700'>Dokumen Foto KTP</span>
+                                    </div>
+                                    <div class='flex gap-2'>
+                                        <!-- Tombol Lihat dengan Icon Mata -->
+                                        <a href='{$ktpUrl}' target='_blank' class='inline-flex items-center px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition shadow-sm gap-1.5'>
+                                            <svg class='w-4 h-4 text-gray-500' xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='2' stroke='currentColor'>
+                                                <path stroke-linecap='round' stroke-linejoin='round' d='M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z' />
+                                                <path stroke-linecap='round' stroke-linejoin='round' d='M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z' />
+                                            </svg>
+                                            Lihat
+                                        </a>
+                                        <!-- Tombol Unduh dengan Icon Download Arrow -->
+                                        <a href='{$ktpUrl}' download class='inline-flex items-center px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition shadow-sm gap-1.5'>
+                                            <svg class='w-4 h-4 text-gray-500' xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='2' stroke='currentColor'>
+                                                <path stroke-linecap='round' stroke-linejoin='round' d='M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3' />
+                                            </svg>
+                                            Unduh
+                                        </a>
+                                    </div>
+                                </div>";
+                        }
+
+                        // --- TOMBOL UNTUK KK ---
+                        if ($kkUrl) {
+                            $htmlOutput .= "
+                                <div class='flex items-center justify-between border border-gray-200 p-3 rounded-xl bg-gray-50/50 shadow-sm'>
+                                    <div class='flex items-center space-x-2'>
+                                        <span class='text-base'></span>
+                                        <span class='text-sm font-medium text-gray-700'>Dokumen Kartu Keluarga (KK)</span>
+                                    </div>
+                                    <div class='flex gap-2'>
+                                        <!-- Tombol Lihat dengan Icon Mata -->
+                                        <a href='{$kkUrl}' target='_blank' class='inline-flex items-center px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition shadow-sm gap-1.5'>
+                                            <svg class='w-4 h-4 text-gray-500' xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='2' stroke='currentColor'>
+                                                <path stroke-linecap='round' stroke-linejoin='round' d='M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z' />
+                                                <path stroke-linecap='round' stroke-linejoin='round' d='M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z' />
+                                            </svg>
+                                            Lihat
+                                        </a>
+                                        <!-- Tombol Unduh dengan Icon Download Arrow -->
+                                        <a href='{$kkUrl}' download class='inline-flex items-center px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition shadow-sm gap-1.5'>
+                                            <svg class='w-4 h-4 text-gray-500' xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='2' stroke='currentColor'>
+                                                <path stroke-linecap='round' stroke-linejoin='round' d='M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3' />
+                                            </svg>
+                                            Unduh
+                                        </a>
+                                    </div>
+                                </div>";
+                        }
+
+                        $htmlOutput .= "</div>";
+                        return new \Illuminate\Support\HtmlString($htmlOutput);
+                    })
+                    ->columnSpanFull(),
                 ]),
             ]);
     }
@@ -114,12 +167,8 @@ class PendudukResource extends Resource
     {
         return $table
             ->columns([
-                // 🌟 BAGIAN BARU: Menampilkan thumbnail foto KTP langsung di baris tabel admin
-                Tables\Columns\ImageColumn::make('foto')
-                    ->label('Berkas')
-                    ->disk('public')
-                    ->circular(),
-
+                // 🌟 FIX FOTO TABEL: Membaca kolom foto_ktp untuk pratinjau lingkaran kecil di tabel admin
+            
                 Tables\Columns\TextColumn::make('nik')
                     ->label('NIK')
                     ->searchable(),

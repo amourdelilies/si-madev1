@@ -4,11 +4,12 @@ namespace App\Livewire;
 
 use Livewire\Component;
 use Livewire\WithFileUploads;
-use Livewire\Attributes\Layout; // 🌟 Diimpor untuk menghilangkan eror highlight pada layout
+use Livewire\Attributes\Layout; 
 use App\Models\Penduduk;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Faker\Factory as Faker; // 🌟 Diimpor untuk generate data acak nasional Indonesia
 
 class RegistrasiPenduduk extends Component
 {
@@ -31,41 +32,32 @@ class RegistrasiPenduduk extends Component
         'status_perkawinan' => 'required',
         'pekerjaan' => 'required',
         'alamat' => 'required',
-        'foto_ktp' => 'required|image|max:2048', // Wajib diunggah & maksimal 2MB
-        'foto_kk' => 'required|image|max:2048',  // Wajib diunggah & maksimal 2MB
+        'foto_ktp' => 'required|image|max:2048', 
+        'foto_kk' => 'required|image|max:2048',  
     ];
 
-    // 🌟 FUNGSI OTOMATIS ISI DATA (SEKARANG NAMA & NIK ACAK OTOMATIS)
+    // 🌟 FUNGSI OTOMATIS ISI DATA (SEKARANG MURNI ACAK INDONESIA TANPA DUPLIKAT DATA LAMA)
     public function isiDataOtomatis()
     {
-        // 1. Membuat 4 digit acak di belakang NIK agar selalu unik
-        $digitAcak = rand(1000, 9999); 
-        $this->nik = '510202170899' . $digitAcak;
-        $this->no_kk = '5102021504090015';
+        // 1. Inisialisasi Faker dengan regional Indonesia (id_ID)
+        $faker = Faker::create('id_ID');
 
-        // 2. Daftar pilihan nama dummy Bali acak beserta jenis kelaminnya
-        $daftarNama = [
-            ['nama' => 'I Made Dharma Wijaya', 'jk' => 'L'],
-            ['nama' => 'Ni Putu Ayu Saraswati', 'jk' => 'P'],
-            ['nama' => 'I Gede Putu Mahendra', 'jk' => 'L'],
-            ['nama' => 'Ni Luh Made Adriani Raisa', 'jk' => 'P'],
-            ['nama' => 'I Nyoman Wayan Juniarta', 'jk' => 'L'],
-            ['nama' => 'Ni Ketut Sri Wahyuni', 'jk' => 'P'],
-        ];
+        // 2. Membuat digit acak unik untuk NIK & No KK agar tidak melanggar Unique Constraint
+        $this->nik = '510202' . $faker->numerify('##########');
+        $this->no_kk = '510202' . $faker->numerify('##########');
 
-        // 3. Mengambil salah satu data nama secara acak
-        $pilihanAcak = $daftarNama[array_rand($daftarNama)];
+        // 3. Mengacak Jenis Kelamin
+        $this->jenis_kelamin = $faker->randomElement(['L', 'P']);
 
-        // 4. Memasukkan hasil acak ke dalam form
-        $this->nama_lengkap = $pilihanAcak['nama'];
-        $this->jenis_kelamin = $pilihanAcak['jk'];
+        // 4. Membuat Nama Acak Indonesia asli bawaan sistem berdasarkan gender (Menghindari Nama Bali yang Sudah Ada)
+        $this->nama_lengkap = $this->jenis_kelamin === 'L' ? $faker->name('male') : $faker->name('female');
 
-        // 5. Sisa data pelengkap lainnya
-        $this->tempat_lahir = 'Denpasar';
-        $this->tanggal_lahir = '1999-02-11';
-        $this->status_perkawinan = 'Belum Kawin';
-        $this->pekerjaan = 'Tenaga Medis';
-        $this->alamat = 'Jl. Dalia XII No. 40';
+        // 5. Mengisi data penunjang lainnya secara acak dan realistis
+        $this->tempat_lahir = $faker->city;
+        $this->tanggal_lahir = $faker->date('Y-m-d', '2005-01-01'); // Batas umur acak maksimal kelahiran 2005
+        $this->status_perkawinan = $faker->randomElement(['Belum Kawin', 'Kawin', 'Cerai Hidup']);
+        $this->pekerjaan = $faker->randomElement(['Karyawan Swasta', 'Wiraswasta', 'Petani', 'Pelajar/Mahasiswa', 'Tenaga Medis']);
+        $this->alamat = $faker->address;
     }
 
     public function simpan()
@@ -79,13 +71,13 @@ class RegistrasiPenduduk extends Component
         // 2. Otomatis buatkan akun User untuk login dashboard (Username = NIK, Password = No KK)
         $user = User::create([
             'name' => $this->nama_lengkap,
-            'email' => $this->nik . '@simade.id', // Email tiruan unik berbasis NIK warga
-            'password' => Hash::make($this->no_kk), // Password bawaan adalah Nomor KK
+            'email' => $this->nik . '@simade.id', 
+            'password' => Hash::make($this->no_kk), 
         ]);
 
         // 3. Simpan data ke tabel penduduk dengan status non-aktif (is_aktif = false)
         Penduduk::create([
-            'user_id' => $user->id, // Menghubungkan data penduduk ke akun login
+            'user_id' => $user->id, 
             'nik' => $this->nik,
             'no_kk' => $this->no_kk,
             'nama_lengkap' => $this->nama_lengkap,
@@ -95,8 +87,8 @@ class RegistrasiPenduduk extends Component
             'status_perkawinan' => $this->status_perkawinan,
             'pekerjaan' => $this->pekerjaan,
             'alamat' => $this->alamat,
-            'foto_ktp' => $pathKtp,   // Jalur foto KTP ke database
-            'foto_kk' => $pathKk, // Jalur foto KK ke database
+            'foto_ktp' => $pathKtp,   
+            'foto_kk' => $pathKk, 
             'is_aktif' => false, 
         ]);
 
@@ -107,7 +99,6 @@ class RegistrasiPenduduk extends Component
         return redirect()->route('penduduk.dashboard');
     }
 
-    // 🌟 Menggunakan Atribut PHP untuk mendeklarasikan layout 'welcome'. 
     #[Layout('welcome')] 
     public function render()
     {

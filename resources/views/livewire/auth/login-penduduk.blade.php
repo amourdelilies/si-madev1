@@ -90,13 +90,6 @@
             </button>
         </form>
 
-        <!-- Footer Registrasi Mandiri -->
-        <div class="mt-6 text-center border-t border-gray-100 pt-4">
-            <p class="text-xs text-gray-400">
-                Belum mendaftarkan berkas domisili? 
-                <!-- 🟢 PERBAIKAN: Teks typo berulang 'Mandiri Mandiri' sudah dibersihkan -->
-                <a href="{{ route('registrasi') }}" class="text-orange-600 font-extrabold hover:underline ml-0.5">Daftar Mandiri</a>
-            </p>
-        </div>
+    
     </div>
 </div>

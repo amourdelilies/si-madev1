@@ -146,4 +146,16 @@ class PengaduanResource extends Resource
             'edit' => Pages\EditPengaduan::route('/{record}/edit'),
         ];
     }
+    public static function getNavigationBadge(): ?string
+    {
+        // Menghitung otomatis pengaduan yang statusnya masih 'pending' atau 'baru'
+        // Silakan sesuaikan 'status' dan 'pending' dengan nama kolom & value di database kamu ya!
+        return static::getModel()::where('status', 'pending')->count() ?: null;
+    }
+
+    // 🌟 FIX: Mengatur warna badge menjadi merah (danger) agar menarik perhatian admin
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return 'danger'; 
+    }
 }

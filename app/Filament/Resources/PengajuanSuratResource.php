@@ -10,7 +10,6 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Tables\Actions\Action;
-use Illuminate\Support\Facades\Storage;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 
@@ -132,7 +131,9 @@ class PengajuanSuratResource extends Resource
                     ->modalContent(fn ($record) => view('surat.preview', [
                         'record' => $record,
                         'data_surat' => json_decode($record->data_kustom, true) ?? [],
-                        'warga' => $record->penduduk
+                        'warga' => $record->penduduk,
+                        'nomor_surat' => $record->nomor_surat ?? '470/XXX/KODE/ROM/'.date('Y'),
+                        'tanggal_cetak' => Carbon::parse($record->disetujui_pada ?? now())->translatedFormat('d F Y')
                     ])),
 
                 Action::make('setujui_otomatis')
@@ -142,13 +143,18 @@ class PengajuanSuratResource extends Resource
                     ->requiresConfirmation()
                     ->visible(fn ($record) => strtolower($record->status) === 'pending')
                     ->action(function ($record) {
+                        // Memaksa sistem internal melokalisasi penulisan tanggal ke Bahasa Indonesia murni
                         Carbon::setLocale('id');
+                        config(['app.locale' => 'id']);
+                        setlocale(LC_TIME, 'id_ID.utf8', 'id_ID', 'id');
+
                         $now = Carbon::now();
                         $tahun = $now->year;
                         
                         $array_bln = [1=>'I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
                         $bulanRomawi = $array_bln[$now->month];
                         
+                        // KUNCI INCREMENT OTOMATIS BERDASARKAN JENIS SURAT
                         $urutanSurat = PengajuanSurat::whereYear('created_at', $tahun)
                             ->where('status', 'disetujui')
                             ->where('jenis_surat_id', $record->jenis_surat_id)
@@ -176,13 +182,12 @@ class PengajuanSuratResource extends Resource
                             'data_surat'    => json_decode($record->data_kustom, true) ?? [],
                             'tanggal_cetak' => $now->translatedFormat('d F Y'),
                             'record'        => $record,
+                            'tte_kades'     => true // Flag pemicu cetak gambar TTE di berkas pisah Blade
                         ];
 
                         $pdf = Pdf::loadView($templatePath, $dataUntukPdf)->setPaper('a4', 'portrait');
-
                         $namaFile = strtoupper(str_replace('-', '_', $record->jenisSurat->slug ?? 'STANDAR')) . "-{$tahun}-" . sprintf("%03d", $urutanSurat) . ".pdf";
                         
-                        // 🌟 SIMPAN LANGSUNG KE ROOT PUBLIC FOLDER AGAR TIDAK TERKUNCI PERMISSION MAC OS (403 FORBIDDEN)
                         $publicPath = public_path('surat_keluar');
                         if (!file_exists($publicPath)) {
                             mkdir($publicPath, 0755, true);
@@ -192,9 +197,10 @@ class PengajuanSuratResource extends Resource
                         $pathSimpan = "surat_keluar/" . $namaFile;
 
                         $record->update([
-                            'status'      => 'disetujui',
-                            'nomor_surat' => $nomorOtomatis,
-                            'jalur_pdf'   => $pathSimpan,
+                            'status'         => 'disetujui',
+                            'nomor_surat'    => $nomorOtomatis,
+                            'jalur_pdf'      => $pathSimpan,
+                            'disetujui_pada' => $now
                         ]);
 
                         \Filament\Notifications\Notification::make()
@@ -214,4 +220,15 @@ class PengajuanSuratResource extends Resource
             'edit'  => Pages\EditPengajuanSurat::route('/{record}/edit'),
         ];
     }
+    public static function getNavigationBadge(): ?string
+{
+    // Otomatis memunculkan jumlah pengajuan yang statusnya masih pending/belum diproses
+    return static::getModel()::where('status', 'pending')->count() ?: null;
+}
+
+// Opsional: Memberikan warna merah/kuning menyala pada badge notifikasinya
+public static function getNavigationBadgeColor(): ?string
+{
+    return 'warning'; // atau 'danger' (merah)
+}
 }
